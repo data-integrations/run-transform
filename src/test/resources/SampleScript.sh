@@ -1,6 +1,5 @@
-#!/bin/bash
+#!/bin/sh
 while true;do
-  echo -n ""
   read USERNAME
   if [[ -z $USERNAME ]];then
     break
