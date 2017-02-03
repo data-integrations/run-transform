@@ -32,7 +32,7 @@ public class RunConfigTest extends TransformPluginsTestBase {
 
   @Test
   public void testInvalidCommandToExecute() throws Exception {
-    Run.RunConfig config = new Run.RunConfig("java -jar", "input", "50 true", "output", "string");
+    Run.RunConfig config = new Run.RunConfig("java -jar", "input", "50 true", "output", "string", null);
     MockPipelineConfigurer configurer = new MockPipelineConfigurer(inputSchema);
     try {
       new Run(config).configurePipeline(configurer);
@@ -46,7 +46,7 @@ public class RunConfigTest extends TransformPluginsTestBase {
   @Test
   public void testInvalidBinaryType() throws Exception {
     Run.RunConfig config = new Run.RunConfig("java -jar /home/user/Example.dll", "input", "50 true", "output",
-                                             "string");
+                                             "string", null);
     MockPipelineConfigurer configurer = new MockPipelineConfigurer(inputSchema);
     try {
       new Run(config).configurePipeline(configurer);
@@ -60,7 +60,7 @@ public class RunConfigTest extends TransformPluginsTestBase {
   @Test
   public void testInvalidInputField() throws Exception {
     Run.RunConfig config = new Run.RunConfig("java -jar /home/user/Example.jar", "invalid_field", "50 true", "output",
-                                             "string");
+                                             "string", null);
     MockPipelineConfigurer configurer = new MockPipelineConfigurer(inputSchema);
     try {
       new Run(config).configurePipeline(configurer);
@@ -76,7 +76,7 @@ public class RunConfigTest extends TransformPluginsTestBase {
   @Test
   public void testInvalidOutputFieldType() throws Exception {
     Run.RunConfig config = new Run.RunConfig("java -jar /home/user/Example.jar", "input", "50 true", "output",
-                                             "record");
+                                             "record", null);
     MockPipelineConfigurer configurer = new MockPipelineConfigurer(inputSchema);
     try {
       new Run(config).configurePipeline(configurer);
@@ -84,6 +84,27 @@ public class RunConfigTest extends TransformPluginsTestBase {
     } catch (IllegalArgumentException e) {
       Assert.assertEquals("Schema type 'record' for output field is not supported. Supported types are: ' boolean, " +
                             "bytes, double, float, int, long and string.", e.getMessage());
+    }
+  }
+
+  @Test
+  public void testInvalidOutputFieldTypeInSchema() throws Exception {
+    Schema outputSchema = Schema.recordOf("input-record",
+                                          Schema.Field.of("id", Schema.of(Schema.Type.STRING)),
+                                          Schema.Field.of("input", Schema.of(Schema.Type.STRING)),
+                                          Schema.Field.of("output", Schema.of(Schema.Type.STRING)));
+
+    Run.RunConfig config = new Run.RunConfig("java -jar /home/user/Example.jar", "input", "50 true", "output",
+                                             "string", outputSchema.toString());
+    MockPipelineConfigurer configurer = new MockPipelineConfigurer(inputSchema);
+    try {
+      new Run(config).configurePipeline(configurer);
+      Assert.fail();
+    } catch (IllegalArgumentException e) {
+      Assert.assertEquals("Output Field 'output' should be of nullable type. Please check the output schema " +
+                            "'{\"type\":\"record\",\"name\":\"input-record\",\"fields\":[{\"name\":\"id\"," +
+                            "\"type\":\"string\"},{\"name\":\"input\",\"type\":\"string\"},{\"name\":\"output\"," +
+                            "\"type\":\"string\"}]}'.", e.getMessage());
     }
   }
 }

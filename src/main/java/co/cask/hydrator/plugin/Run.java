@@ -32,6 +32,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
@@ -62,6 +63,9 @@ public class Run extends Transform<StructuredRecord, StructuredRecord> {
     config.validateBinaryExecutableType();
     config.validateInputFields(inputSchema);
     config.validateOutputFieldType();
+    if (!Strings.isNullOrEmpty(config.schema)) {
+      config.verifyOutputFieldTypeInSchema();
+    }
     stageConfigurer.setOutputSchema(buildOutputSchema(inputSchema));
   }
 
@@ -163,13 +167,18 @@ public class Run extends Transform<StructuredRecord, StructuredRecord> {
       "and string.")
     private final String outputFieldType;
 
+    @Description("Schema of the record.")
+    @Nullable
+    private final String schema;
+
     public RunConfig(String commandToExecute, @Nullable String fieldsToProcess, @Nullable String fixedInputs,
-                     String outputField, String outputFieldType) {
+                     String outputField, String outputFieldType, @Nullable String schema) {
       this.commandToExecute = commandToExecute;
       this.fieldsToProcess = fieldsToProcess;
       this.fixedInputs = fixedInputs;
       this.outputField = outputField;
       this.outputFieldType = outputFieldType;
+      this.schema = schema;
     }
 
     /**
@@ -232,6 +241,36 @@ public class Run extends Transform<StructuredRecord, StructuredRecord> {
           throw new IllegalArgumentException(
             String.format("Schema type '%s' for output field is not supported. Supported types are: ' boolean, bytes," +
                             " double, float, int, long and string.", outputFieldType));
+      }
+    }
+
+    /**
+     * Verifies whether the type of output field coming through schema is proper or not.
+     */
+    private void verifyOutputFieldTypeInSchema() {
+      try {
+        Schema outputSchema = Schema.parseJson(schema);
+        List<Schema.Field> outputFields = outputSchema.getFields();
+        for (Schema.Field field : outputFields) {
+          if (field.getName().equals(outputField) && !field.getSchema().isNullable()) {
+            throw new IllegalArgumentException(
+              String.format("Output Field '%s' should be of nullable type. Please check the output schema '%s'.",
+                            outputField, outputSchema));
+          }
+        }
+
+        for (Schema.Field field : outputFields) {
+          if (field.getName().equals(outputField)) {
+            String type = field.getSchema().getNonNullable().getType().name().toLowerCase();
+            if (!type.equals(outputFieldType)) {
+              throw new IllegalArgumentException(
+                String.format("Type mismatch for the Output Field '%s'. Type should be '%s' but found '%s'. Please " +
+                                "check the output schema '%s'.", outputField, outputFieldType, type, outputSchema));
+            }
+          }
+        }
+      } catch (IOException e) {
+        throw new IllegalArgumentException("Unable to parse the output schema.", e);
       }
     }
   }
