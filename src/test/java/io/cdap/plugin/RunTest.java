@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016 Cask Data, Inc.
+ * Copyright © 2016-2019 Cask Data, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -14,26 +14,26 @@
  * the License.
  */
 
-package co.cask.hydrator.plugin;
+package io.cdap.plugin;
 
-import co.cask.cdap.api.data.format.StructuredRecord;
-import co.cask.cdap.api.data.schema.Schema;
-import co.cask.cdap.api.dataset.table.Table;
-import co.cask.cdap.datapipeline.SmartWorkflow;
-import co.cask.cdap.etl.api.Transform;
-import co.cask.cdap.etl.mock.batch.MockSink;
-import co.cask.cdap.etl.mock.batch.MockSource;
-import co.cask.cdap.etl.proto.v2.ETLBatchConfig;
-import co.cask.cdap.etl.proto.v2.ETLPlugin;
-import co.cask.cdap.etl.proto.v2.ETLStage;
-import co.cask.cdap.proto.artifact.AppRequest;
-import co.cask.cdap.proto.id.ApplicationId;
-import co.cask.cdap.proto.id.NamespaceId;
-import co.cask.cdap.test.ApplicationManager;
-import co.cask.cdap.test.DataSetManager;
-import co.cask.cdap.test.WorkflowManager;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.cdap.cdap.api.data.format.StructuredRecord;
+import io.cdap.cdap.api.data.schema.Schema;
+import io.cdap.cdap.api.dataset.table.Table;
+import io.cdap.cdap.datapipeline.SmartWorkflow;
+import io.cdap.cdap.etl.api.Transform;
+import io.cdap.cdap.etl.mock.batch.MockSink;
+import io.cdap.cdap.etl.mock.batch.MockSource;
+import io.cdap.cdap.etl.proto.v2.ETLBatchConfig;
+import io.cdap.cdap.etl.proto.v2.ETLPlugin;
+import io.cdap.cdap.etl.proto.v2.ETLStage;
+import io.cdap.cdap.proto.artifact.AppRequest;
+import io.cdap.cdap.proto.id.ApplicationId;
+import io.cdap.cdap.proto.id.NamespaceId;
+import io.cdap.cdap.test.ApplicationManager;
+import io.cdap.cdap.test.DataSetManager;
+import io.cdap.cdap.test.WorkflowManager;
 import org.apache.commons.io.FileUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -102,7 +102,7 @@ public class RunTest extends TransformPluginsTestBase {
 
     AppRequest<ETLBatchConfig> appRequest = new AppRequest<>(BATCH_ARTIFACT, etlConfig);
     ApplicationId appId = NamespaceId.DEFAULT.app("RunJarTest");
-    ApplicationManager appManager = deployApplication(appId.toId(), appRequest);
+    ApplicationManager appManager = deployApplication(appId, appRequest);
 
     DataSetManager<Table> inputManager = getDataset(inputTable);
     List<StructuredRecord> input = ImmutableList.of(
@@ -115,7 +115,7 @@ public class RunTest extends TransformPluginsTestBase {
     MockSource.writeInput(inputManager, input);
     WorkflowManager workflowManager = appManager.getWorkflowManager(SmartWorkflow.NAME);
     workflowManager.start();
-    workflowManager.waitForFinish(5, TimeUnit.MINUTES);
+    workflowManager.waitForStopped(5, TimeUnit.MINUTES);
 
     DataSetManager<Table> outputManager = getDataset(sinkTable);
     List<StructuredRecord> outputRecords = MockSink.readOutput(outputManager);
@@ -173,7 +173,7 @@ public class RunTest extends TransformPluginsTestBase {
 
     AppRequest<ETLBatchConfig> appRequest = new AppRequest<>(BATCH_ARTIFACT, etlConfig);
     ApplicationId appId = NamespaceId.DEFAULT.app("RunJarTest");
-    ApplicationManager appManager = deployApplication(appId.toId(), appRequest);
+    ApplicationManager appManager = deployApplication(appId, appRequest);
 
     DataSetManager<Table> inputManager = getDataset(inputTable);
     List<StructuredRecord> input = ImmutableList.of(
@@ -186,7 +186,7 @@ public class RunTest extends TransformPluginsTestBase {
     MockSource.writeInput(inputManager, input);
     WorkflowManager workflowManager = appManager.getWorkflowManager(SmartWorkflow.NAME);
     workflowManager.start();
-    workflowManager.waitForFinish(5, TimeUnit.MINUTES);
+    workflowManager.waitForStopped(5, TimeUnit.MINUTES);
 
     DataSetManager<Table> outputManager = getDataset(sinkTable);
     List<StructuredRecord> outputRecords = MockSink.readOutput(outputManager);
