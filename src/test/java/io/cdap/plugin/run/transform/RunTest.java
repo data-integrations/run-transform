@@ -14,26 +14,35 @@
  * the License.
  */
 
-package io.cdap.plugin;
+package io.cdap.plugin.run.transform;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.cdap.cdap.api.artifact.ArtifactSummary;
+import io.cdap.cdap.api.artifact.ArtifactVersion;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.dataset.table.Table;
+import io.cdap.cdap.datapipeline.DataPipelineApp;
 import io.cdap.cdap.datapipeline.SmartWorkflow;
 import io.cdap.cdap.etl.api.Transform;
 import io.cdap.cdap.etl.mock.batch.MockSink;
 import io.cdap.cdap.etl.mock.batch.MockSource;
+import io.cdap.cdap.etl.mock.test.HydratorTestBase;
 import io.cdap.cdap.etl.proto.v2.ETLBatchConfig;
 import io.cdap.cdap.etl.proto.v2.ETLPlugin;
 import io.cdap.cdap.etl.proto.v2.ETLStage;
+import io.cdap.cdap.proto.ProgramRunStatus;
 import io.cdap.cdap.proto.artifact.AppRequest;
 import io.cdap.cdap.proto.id.ApplicationId;
+import io.cdap.cdap.proto.id.ArtifactId;
 import io.cdap.cdap.proto.id.NamespaceId;
 import io.cdap.cdap.test.ApplicationManager;
 import io.cdap.cdap.test.DataSetManager;
+import io.cdap.cdap.test.TestConfiguration;
 import io.cdap.cdap.test.WorkflowManager;
+import org.apache.commons.codec.binary.Base32;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.FileUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -51,16 +60,34 @@ import java.util.concurrent.TimeUnit;
 /**
  * Test Cases for Run.
  */
-public class RunTest extends TransformPluginsTestBase {
+public class RunTest extends HydratorTestBase {
   private static final Schema INPUT = Schema.recordOf("input", Schema.Field.of("id", Schema.of(Schema.Type.INT)),
                                                       Schema.Field.of("input", Schema.of(Schema.Type.STRING)));
 
+  @ClassRule
+  public static final TestConfiguration CONFIG = new TestConfiguration("explore.enabled", false);
+  private static final ArtifactVersion CURRENT_VERSION = new ArtifactVersion("6.1.0");
+  private static final ArtifactId BATCH_APP_ARTIFACT_ID =
+    NamespaceId.DEFAULT.artifact("data-pipeline", CURRENT_VERSION.getVersion());
+  protected static final ArtifactSummary BATCH_ARTIFACT =
+    new ArtifactSummary(BATCH_APP_ARTIFACT_ID.getArtifact(), BATCH_APP_ARTIFACT_ID.getVersion());
+
+  @ClassRule
+  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
   @ClassRule
   public static TemporaryFolder folder = new TemporaryFolder();
   private static File sourceFolder;
 
   @BeforeClass
   public static void setupTest() throws Exception {
+    // Add the ETL batch artifact and mock plugins.
+    setupBatchArtifacts(BATCH_APP_ARTIFACT_ID, DataPipelineApp.class);
+
+    // Add our plugins artifact with the ETL batch artifact as its parent.
+    // This will make our plugins available to the ETL batch.
+    addPluginArtifact(NamespaceId.DEFAULT.artifact("run-transform", "1.0.0"), BATCH_APP_ARTIFACT_ID,
+                      Base64.class, Base32.class, Run.class);
+
     sourceFolder = temporaryFolder.newFolder("run");
   }
 
@@ -114,8 +141,7 @@ public class RunTest extends TransformPluginsTestBase {
 
     MockSource.writeInput(inputManager, input);
     WorkflowManager workflowManager = appManager.getWorkflowManager(SmartWorkflow.NAME);
-    workflowManager.start();
-    workflowManager.waitForStopped(5, TimeUnit.MINUTES);
+    workflowManager.startAndWaitForRun(ProgramRunStatus.COMPLETED, 5, TimeUnit.MINUTES);
 
     DataSetManager<Table> outputManager = getDataset(sinkTable);
     List<StructuredRecord> outputRecords = MockSink.readOutput(outputManager);
@@ -172,7 +198,7 @@ public class RunTest extends TransformPluginsTestBase {
       .build();
 
     AppRequest<ETLBatchConfig> appRequest = new AppRequest<>(BATCH_ARTIFACT, etlConfig);
-    ApplicationId appId = NamespaceId.DEFAULT.app("RunJarTest");
+    ApplicationId appId = NamespaceId.DEFAULT.app("RunScriptTest");
     ApplicationManager appManager = deployApplication(appId, appRequest);
 
     DataSetManager<Table> inputManager = getDataset(inputTable);
@@ -185,8 +211,7 @@ public class RunTest extends TransformPluginsTestBase {
 
     MockSource.writeInput(inputManager, input);
     WorkflowManager workflowManager = appManager.getWorkflowManager(SmartWorkflow.NAME);
-    workflowManager.start();
-    workflowManager.waitForStopped(5, TimeUnit.MINUTES);
+    workflowManager.startAndWaitForRun(ProgramRunStatus.COMPLETED, 5, TimeUnit.MINUTES);
 
     DataSetManager<Table> outputManager = getDataset(sinkTable);
     List<StructuredRecord> outputRecords = MockSink.readOutput(outputManager);

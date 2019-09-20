@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.plugin;
+package io.cdap.plugin.run.transform;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
