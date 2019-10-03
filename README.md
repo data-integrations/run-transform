@@ -14,7 +14,7 @@ Getting Started
 
 Prerequisites
 --------------
-CDAP version 3.5.x or higher.
+CDAP version 6.1.x or higher.
 
 Building Plugins
 ----------------
