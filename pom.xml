@@ -79,7 +79,7 @@
 
   <properties>
     <cdap.version>4.1.0</cdap.version>
-    <hadoop.version>2.3.0</hadoop.version>
+    <hadoop.version>2.10.1</hadoop.version>
     <junit.version>4.11</junit.version>
     <hydrator.version>1.4.0</hydrator.version>
     <widgets.dir>widgets</widgets.dir>
